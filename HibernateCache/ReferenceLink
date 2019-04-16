@@ -1,0 +1,142 @@
+Video Tutorials(Telusko)
+	- Theory:-     
+		https://www.youtube.com/watch?v=fVDu0sF_wSA&index=16&list=PLsyeobzWxl7qBZtsEvp_n2A7sJs2MpF3r
+	- 16,17,18 Hibernate Tutorial | Caching Level 1,2:-  keep watching the playlist for more
+		https://www.youtube.com/watch?v=7yPalDu6gx8&index=17&list=PLsyeobzWxl7qBZtsEvp_n2A7sJs2MpF3r 
+				
+				
+First:----------  Go to MySql and create a new database eg. 'neon'				
+1. Create Maven Project (QuickStart - java core)
+2. Create a POJO class Alien 
+	- @Entity and @Id must be added
+	- (Alien(aid,aname, color))
+3. Add the hibernate and MySql dependencies on the maven dependencies(pom.xml) (from mvnrepository.com)
+		- MySQL Version and the mySQL diver should match (eg. Workbench 8-- > i used mysql .jar V 8.0.11)
+4. Add the hibernate plugin(JBoss) for Eclipse (if not available)
+			:- go to Helop --> Eclipse marketplace
+			:- install only the "hibernate" from all the functionalities listed under the jboss
+5. in App.class
+		- Create "Alien" object and set values to all the properties
+				- here i have entered the data three times 
+		- create the session object 
+					- create configuration object --> create SessionFactory obj --> create session object
+		- save the object session.save(alien)
+6 congifure jdbc
+	- create a new file "hibernate Configuration file(cfg.xml)"			
+				Hibernate Version: 5.3 was not working so i switched it to 5.2 and now its working
+				Databse dialect: MySQL
+				Driver class: com.mysql.jdbc.Driver
+				Connection URL: jdbc:mysql://localhost:3306/neon
+				username: root
+				password: root
+7. in order hibernate to use the configuration file cfg.xml 
+	- you should explicitly mention on the App.class, when creating the Congfiguration obje
+				 Configuration con = new Configuration().configure();
+    - the .configure() will directly go and access the default cfg.xml file
+    
+8. To specify that you are working with an entity class you should add ".addAnnotatedClass(Alien.class)"
+	  Configuration con = new Configuration().configure().addAnnotatedClass(Alien.class);
+10.	Whenever you want to make changes in DB (including creating a new table), you have to mention n create a transaction
+   - in App.class, before session.save(alien)
+   		- 		Transaction tx = session.beginTransaction()
+   				session.save(alien)
+   				tx.commit()
+   				
+11. If "table doesnt exist occurs", create the table
+		1. go to cfg.xml file and specify or tell hibernate to create a table for you (user create or update(i prefere this one))
+			- first i tried with "update" it doenst work so i used "create" for the first one then changed the code to "update" and it works
+ 					<property name="hibernate.hbm2ddl.auto">create OR update</property>
+		
+		2.(not recommended for this course) just go to the database and create the table with the same properties like the class
+	
+12. If you are 	getting at the "con.buildSessionFactory" --> "From Type Configuration is deprecated" in App.class
+	- For Latest version of Hibernate after 4.1, there is a new class to work with SesisonFactory use it before the error
+			ServiceRegistry reg = new ServiceRegistryBuilder().applySettings(con.getProperties()).buildServiceRegistry();
+	- then use the 'reg' in 
+		SessionFactory sf = con.buildSessionFactory(reg);
+	- the error "deprecated" will be gone :)
+	
+13. To see how hibernate is converting the java object's values to SQL qruery to create or update the data
+ - you can display the sql statement on the console
+ 	- go to cfg.xml and add property
+ 			      <property name="show_sql">true</property>
+ 			      
+14. Fetching DATA
+		- Create Alien object  Alien alien = null;
+		- assign value   alien = (Alien)session1.get(Alien.class, 101);
+		- print the object system.out.println(alien)
+				- will print the alien data with id 101 
+15. First Level Cache
+	- is by default provided by Hibernate
+	- if you want to get the same data many times before closing the session (SAME SESSION)
+			- it will fire a single query and show all the data as many times as you want
+			- the query for the session is saved in the first level cache and no need to ask the db many times
+16. Second Level Cache
+	- is not by default provided by Hibernate
+	- for DIFFERENT SESSIONs, 
+			-  session open "do ur logic" then session closed  AND  session1 open "do ur logic" then session1 closed 
+			- both sessions will fire query individually and run the query in the DB not in the cache
+	- So to use Second level Cache, 
+		1.  you have to specify it on the "hibernate.cfg.xml" file
+			- create a new property <property></property>
+		2.  get the provider for the second level cache
+			- ehcache is one of the provider file (download the jar file "hibernate and ehcache integratoin")
+    - To start Adding the Depenency, go to Pom.xml (it is possible to download jar from mvnrepository too)
+    	1. check if the dependency exists 
+    	2. in "Dependencies" tab 
+    		--> click add(dependencies) search for "ehcache" jar file
+    			- look for "net.sf.ehcache" and click ok (latest version is ok)
+    	    --> click add again to add "hibernate-ehcache" for integration of ehcache and hibernate
+    	    	- look for "org.hibernate hibernate-ehcache"
+    	3. Make sure that the jar files are added in the maven dependencies and also in Pom.xml file
+    	4. Make sure that "hibernate-ehcache" and "hibernate-core" are equal versions (in pom.xml file)
+    - in cfg.xml file, mention two things by creating properites
+    	1. second level cache
+    		<property name="hibernate.cache.use_second_level_cache">true</property>
+    	2. specify region factory name for hibernate 4(provider_class:-  for hibernate 1 - 3)
+    		<!-- <property name="hibernate.cache.provider_class">org.hibernate.cache.EhCacheProvider</property> used for hibernate 1 - 3 -->     
+        	<property name="hibernate.cache.region.factory_class">org.hibernate.cache.ehcache.EhCacheRegionFactory</property> <!-- is used for hibernate 4 -->
+    - Explicity specify in all the classes that you want to apply second level cache
+    	- For Example:- in Alien.class
+    		- To enable cache:- @Cacheable
+    		- Specify the Strategies:- @Cache(usage=CacheConcurrencyStrategy.READ_ONLY)
+    				- READ_ONLY _:- when u don't update ur DB
+    				- READ_WRITE :- when u r updating ur db many times
+    - Now, run your app and you can see that only a single query is fired to retrieve both the data for different sessions.
+    Because both the queries are saved in the Second Level Cache
+    
+ -------------------- Hibernate Caching Level 2 with Query ------------------------------------   
+ - Above we were using the hibernate query (example: session.get(classname, serializable))
+ 		eg. alien = (Alien) session2.get(Alien.class, 101);	
+ - What if we want to use our own query to access the data
+ 	1. Specify your Query (import org.hibernate.*;)
+ 		
+ 		Session session1 = sessionFactory.openSession();
+		session1.beginTransaction();
+		    Query q1 = session1.createQuery("from Alien where aid=101");
+		    alien = (Alien) q1.uniqueResult();
+		System.out.println(alien);
+		session1.getTransaction().commit();
+		session1.close();
+
+		Session session2 = sessionFactory.openSession();
+		session2.beginTransaction();
+		     Query q2 = session2.createQuery("from Alien where aid=101");
+		     alien = (Alien) q2.uniqueResult();
+		System.out.println(alien);
+		session2.getTransaction().commit();
+		session2.close();
+	 - this will work but will fire 2 queries because, second level cache is available only for get methods (it hibernate) not for the "queries" that you have created
+	 - To fire only single query for every session, 
+	 		1. specify propertiy in the cfg.xml file
+	 			<property name="hibernate.cache.use_query_cache">true</property>
+	 		2. Specify(in App.class) on your object that you are using query cache too, after creating the object
+	 			Query q1 = session1.createQuery("from Alien where aid=101");
+	 			q1.setCacheable(true);
+	 			
+	 			Query q2 = session1.createQuery("from Alien where aid=101");
+	 			q2.setCacheable(true);
+	 - Now, single query will be fired for both the sessions and results will be displayed 
+ 		
+    			
+	
